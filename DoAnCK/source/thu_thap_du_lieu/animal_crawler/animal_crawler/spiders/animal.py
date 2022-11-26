@@ -1,5 +1,6 @@
 import os
 from pprint import pprint
+from time import sleep
 import pandas as pd
 import scrapy
 
@@ -22,9 +23,11 @@ class AnimalsSpider(scrapy.Spider):
 
     def start_requests(self):
         df = pd.read_csv('../animals_urls.csv')
-        list_urls = df['url']
+        list_urls = df[df['url'] != "/grey-wolf"]['url']
         list_urls[:] = 'https://animalia.bio' + list_urls[:]
-        for url in list_urls[:]:
+        yield scrapy.Request(url='https://animalia.bio/grey-wolf', callback=self.parse)
+        sleep(2)
+        for url in list_urls:
             yield scrapy.Request(url=url, callback=self.parse)
 
     def parse(self, response: scrapy.http.TextResponse):
@@ -64,11 +67,15 @@ class AnimalsSpider(scrapy.Spider):
         dict_general_info['Diet'] = [diet.strip() for diet in response.css('.s-diet-item__link::text').getall()]
 
         # Mating Habits
-        mating_keys = response.css('.s-mating-slug__text::text').getall() + \
-                      response.css('.s-population-slug::text').getall()
-        mating_values = response.css('.s-mating-char :nth-child(1)::text').getall() + \
-                        response.css('.s-population__link::text').getall()
+        mating_keys = response.css('.s-mating-slug__text::text').getall()
+        mating_values = response.css('.s-mating-char :nth-child(1)::text').getall()
         dict_general_info['Mating_Habits'] = create_dict(mating_keys, mating_values)
+
+
+        # population
+        population_keys = response.css('.s-population-slug::text').getall()
+        population_values = response.css('.s-population__link::text').getall()
+        dict_general_info['Population'] = create_dict(population_keys, population_values)
 
 
 
